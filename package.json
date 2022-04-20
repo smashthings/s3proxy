@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "browser-sync": "^2.27.9",
+    "nodemon": "^2.0.15",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.12",
+    "postcss-cli": "^9.1.0",
+    "tailwindcss": "^3.0.24"
+  },
+  "scripts": {
+    "browser": "browser-sync start --server --files \"templates/*.html\" \"templates/*.css\"",
+    "dev": "npx tailwindcss -i ./pre-css/input.css -o ./templates/output.css --watch",
+    "watch:dev": "nodemon -x npm run dev",
+    "watch": "run-p watch:dev browser"
+  }
+}
