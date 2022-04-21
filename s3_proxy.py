@@ -5,7 +5,10 @@ import waitress
 import flask
 import jinja2
 import mimetypes
+import datetime
 import os
+import uuid
+import json
 
 ##############################################
 # Helpers
@@ -14,9 +17,9 @@ def Log(message, quit:bool=False, quitWithStatus:int=1, AlwaysVerbose:bool=True)
   if AlwaysVerbose == False and VerboseSetting == False:
     return
   if type(message) is dict:
-    logToFile(LoggingLocation, f'<{TimeStamp()}> - ' + "\n => ".join([k + ": " + str(message[k]) for k in message]))
+    print(f'<{TimeStamp()}> - ' + "\n => ".join([k + ": " + str(message[k]) for k in message]))
   else:
-    logToFile(LoggingLocation, f'<{TimeStamp()}> - {message}')
+    print(f'<{TimeStamp()}> - {message}')
 
   if quit or quitWithStatus > 1:
     exit(1 * quitWithStatus)
@@ -33,6 +36,26 @@ def LoadTemplate(fileLocation:str):
   t = jinja2.Template(fData)
   return t
 
+def FmtSize(num, suffix='B'):
+  for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+    if abs(num) < 1024.0:
+      return "%3.1f%s%s" % (num, unit, suffix)
+    num /= 1024.0
+  return "%.1f%s%s" % (num, 'Yi', suffix)
+
+def ResponseMaker(statusCode:int, data, reason:str=""):
+  if statusCode > 399 and reason == "":
+    raise Exception(f"responseMaker(): Received an error status code without a reason, statusCode: '{statusCode}', reason: '{reason}', data '{data}'")
+  returning = {
+    "status": statusCode
+  }
+  if data:
+    returning["response"] = data
+  
+  if reason:
+    returning["reason"] = reason
+
+  return (json.dumps(returning), statusCode)
 
 ##############################################
 # Variables
@@ -41,8 +64,16 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 allTemplates = {}
 targetBucket = os.getenv("TARGET_BUCKET") if "TARGET_BUCKET" in os.environ else ""
 awsRegion = os.getenv("AWS_REGION") if "AWS_REGION" in os.environ else ""
+awsAccountNumber = boto3.client('sts').get_caller_identity().get('Account')
 
-app_logging.Log("Checking for required environment variable settings:")
+Log(f'''Running with settings:
+- Bucket Name => {targetBucket}
+- AWS Region => {awsRegion}
+- AWS Account Number => {awsAccountNumber}''')
+
+s3Client = boto3.client("s3", region_name=awsRegion)
+
+Log("Checking for required environment variable settings:")
 
 if targetBucket == "":
   Log("Did not find environment variable TARGET_BUCKET populated, exiting!", quit=True)
@@ -76,7 +107,7 @@ def LogResponses(res:flask.wrappers.Response):
 
   loggingDetails = {
     "type": "Response",
-    "time": app_logging.TimeStamp(),
+    "time": TimeStamp(),
     "status": res.status_code,
     "clientIp": req.remote_addr,
     'routingExceptions': str(req.routing_exception) if req.routing_exception else "none",
@@ -87,8 +118,31 @@ def LogResponses(res:flask.wrappers.Response):
     "scheme": req.scheme
   }
 
-  app_logging.Log(loggingDetails)
+  Log(loggingDetails)
   return res
+
+def GetObjects(prefix:str="", continueToken:str=""):
+  if continueToken != "":
+    res = s3Client.list_objects_v2(Bucket=targetBucket, ContinuationToken=continueToken)
+  elif prefix != "":
+    res = s3Client.list_objects_v2(Bucket=targetBucket, Prefix=prefix)
+  else:
+    res = s3Client.list_objects_v2(Bucket=targetBucket, Prefix=prefix)
+  pruned = {
+    "objs": [],
+    "token": ""
+  }
+  for f in res['Contents']:
+    pruned['objs'].append({
+      "name": f["Key"],
+      "last_modified": f["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
+      "size": FmtSize(f["Size"]),
+      "link": f"/fetch/{f['Key']}"
+    })
+  if 'IsTruncated' in res and res['IsTruncated'] and 'NextContinuationToken' in res:
+    pruned['token'] = res["NextContinuationToken"]
+  
+  return pruned
 
 ##############################################
 # Handlers
@@ -99,71 +153,76 @@ def rHealthCheck():
   }
 
 def rStaticContent(path):
-  res = flask.make_response()
-  if not os.path.exists(path):
-    res.status_code = 404
-    res.content_type = "application/json"
-    res.set_data(json.dumps(
-      {
-        'status': 404,
-        'reason': f"Static content at '{path}' not found on this server"
-      }))
-    return res
-
+  t = f'templates/{path}'
+  if not os.path.exists(t):
+    return ResponseMaker(404, None, f"Static content at '{path}' not found on this server")
   try:
-    with open(path) as f:
+    res = flask.make_response()
+    with open(t) as f:
       res.set_data(f.read())
     res.status_code = 200
-    t = mimetypes.guess_type(path)
+    t = mimetypes.guess_type(t)
     res.content_type = t if t is not None else "application/octet-stream"
     return res
   except:
-    res.status_code = 500
-    res.content_type = "application/json"
-    res.set_data(json.dumps(
-      {
-        'status': 500,
-        'reason': f"Failed to read file at path '{path}', file exists but exception raised when attempting to return it"
-      }))
-    return res
+    return ResponseMaker(500, None, f"Failed to read file at path '{path}', file exists but exception raised when attempting to return it")
 
 def rIndexPage():
-  return flask.render_template('index.html')
+  return flask.render_template('index.html', bucket_name=targetBucket, region=awsRegion, account_number=awsAccountNumber)
 
 def rFetchObject(key:str):
-  s3Client = boto3.client("s3")
+  try:
+    thing = s3Client.get_object(Bucket=targetBucket, Key=key)
+    if not thing:
+      return ResponseMaker(404, None, f"Static content at '{path}' not found on this bucket")
+    res = flask.make_response()
+    res.set_data(thing['Body'].read())
+    res.content_type = thing['ContentType']
+    res.status_code = 200
+    return res
+  except Exception as e:
+    print(key)
+    print(e)
 
-  obj = s3.Object(targetBucket, key)
-  if not obj:
-    return 
-  obj.get()['Body'].read().decode('utf-8') 
+    return ResponseMaker(500, None, f"Failed to fetch object at key '{key}', exception raised when attempting to handle it")
+    return res
 
-def rListObjects():
-  s3Client = boto3.client("s3")
-
-  obj = s3.Object(targetBucket, key)
-  obj.get()['Body'].read().decode('utf-8') 
+def rGetObjects():
+  req = flask.request
+  try:
+    resBody = req.get_json(force=True)
+    if 'prefix' in resBody:
+      v = GetObjects(prefix=resBody['prefix'])
+    elif 'token' in resBody:
+      v = GetObjects(continueToken=resBody['token'])
+    else:
+      v = GetObjects()
+    
+    return ResponseMaker(200, v)
+  except Exception as e:
+    return ResponseMaker(500, None, reason=f"Failed to parse json in request with error {e}")
 
 ##############################################
 # The full routing list
 RouteMapping("/healthcheck", rHealthCheck, ["GET"])
-RouteMapping("/", rConfigPage, ["GET"])
-RouteMapping("/output.css", rStaticContent, ["POST"])
+RouteMapping("/", rIndexPage, ["GET"])
+RouteMapping("/templates/<path>", rStaticContent, ["GET"])
+RouteMapping("/fetch/<path:key>", rFetchObject, ["GET"])
+RouteMapping("/get-objects", rGetObjects, ["POST"])
 
 ##############################################
 # Main
 
 s3Proxy = flask.Flask("s3Proxy")
 
-app_logging.Log("Loading VCL Template...")
-allTemplates["vcl"] = LoadTemplate(f"{scriptDir}/templates/default.vcl")
-allTemplates["nginx"] = LoadTemplate(f"{scriptDir}/templates/nginx.conf")
+Log("Loading VCL Template...")
+allTemplates["index"] = LoadTemplate(f"{scriptDir}/templates/index.html")
 
-app_logging.Log("Loading routes...")
+Log("Loading routes...")
 for r in RouteList:
   s3Proxy.route(r.route, methods=r.methods)(r.handler)
 
 s3Proxy.after_request(LogResponses)
 
-app_logging.Log("Starting server...")
+Log("Starting server...")
 waitress.serve(s3Proxy, host="0.0.0.0", port=5000)

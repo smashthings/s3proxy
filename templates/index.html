@@ -2,36 +2,57 @@
 
 <html>
     <head>
-        <link rel="stylesheet" href="/templates/output.css" />
-        <link rel='stylesheet' id='typekit-css'  href='https://fonts.googleapis.com/css2?family=Poppins%3Aital%2Cwght%400%2C400%3B0%2C500%3B0%2C700%3B1%2C400%3B1%2C500%3B1%2C700&#038;display=swap&#038;ver=5.7.2' type='text/css' media='all' />
+      <link rel="stylesheet" href="templates/out.css" type="text/css" />
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <script>
-          // window.protoApi = {
-          //   functions: {
-          //     whenReady: function(){
-          //       window.f = window.protoApi.functions;
-          //       $('.requiredSetting').on("change paste keyup", f.requiredSettingToggle);
-          //       $('.expandingList').on("change paste keyup", f.addNewRow);
-          //       $('.buttonSwitch').click(f.buttonSwitch);
-          //       $('#submitButton').click(f.send);
-          //       $('#toggleTop').change(f.changeNotificationButtonText);
-          //       $('#prepopulateButton').click(f.prepopulate);
-          //     },
-          //     buttonSwitch: function(){
-          //       let t = $(this);
-          //       if (t.attr("settingValue") == "true") {
-          //         t.attr("settingValue", "false").removeClass("button-success").addClass("button-secondary").text("-");
-          //       } else {
-          //         t.attr("settingValue", "true").removeClass("button-secondary").addClass("button-success").text("✓");
-          //       };
-          //     },
-          //   },
-          //   parsedData: {}
-          // };
-          // $(window.protoApi.functions.whenReady);
+          window.s3Proxy = {
+            functions: {
+              ready: function(fn) {
+                if (document.readyState != 'loading'){
+                  fn();
+                } else {
+                  document.addEventListener('DOMContentLoaded', fn);
+                }
+              },
+              postApi: function(path, data, successFunc, errFunc){
+                var request = new XMLHttpRequest();
+                request.open('POST', window.location.origin + (path.startsWith("/") ? path : "/" + path), true);
+                request.setRequestHeader('Content-Type', 'application/json');
+                request.onload = function() {
+                  let statusReason = "";
+                  try {
+                    let jBody = JSON.parse(this.responseText);
+                    if (jBody.reason) {
+                      statusReason = ` - ${jBody.reason}`;
+                    }
+                  } catch {}
+                  if (this.status >= 200 && this.status < 400) {
+                    if (successFunc){
+                      successFunc(this.responseText);
+                    };
+                  } else {
+                    window.alert(`tracr.functions.postApi(${path}): Failed POST request to ${path} with status of ${this.status}${statusReason}`);
+                    if (errFunc) {
+                      errFunc();
+                    };
+                  };
+                };
+                request.send(JSON.stringify(data));
+              },
+              fetchStyles: async function(){
+                fetch("/templates/out.css")
+                .then(response => response.text())
+                .then((data) => {
+                  let ele = document.createElement("style");
+                  ele.innerHTML = data;
+                  document.body.appendChild(ele);
+                });
+              }
+            },
+            parsedData: {},
+            signals: {}
+          };
         </script>
-
-
     </head>
 
     <body class="text-gray-700">
@@ -44,66 +65,13 @@
             {{ bucket_name }} - {{ region }} - {{ account_number }}
           </div>
         </div>
-        <div>
-
-          
-          <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-              <tr>
-                <th scope="col" class="p-4">
-                  <div class="flex items-center">
-                    <input id="checkbox-all-search" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                    <label for="checkbox-all-search" class="sr-only">checkbox</label>
-                  </div>
-                </th>
-                <th scope="col" class="px-6 py-3">
-                  Object
-                </th>
-                <th scope="col" class="px-6 py-3">
-                  Last Modified
-                </th>
-                <th scope="col" class="px-6 py-3">
-                  Size
-                </th>
-                <th scope="col" class="px-6 py-3">
-                  Type
-                </th>
-                <th scope="col" class="px-6 py-3">
-                  <span class="sr-only">Edit</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for i in objs %}
-              <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                <td class="w-4 p-4">
-                  <div class="flex items-center">
-                    <input id="checkbox-table-search-1" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                    <label for="checkbox-table-search-1" class="sr-only">checkbox</label>
-                  </div>
-                </td>
-                <th scope="row" class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                  {{ name }}
-                </th>
-                <td class="px-6 py-4">
-                  {{ last_modified }}
-                </td>
-                <td class="px-6 py-4">
-                  {{ size }}
-                </td>
-                <td class="px-6 py-4">
-                  {{ type }}
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <a href="{{ link }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">link</a>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-
+        <div id="objectTable">
         </div>
       </div>
     </body>
 
+    <script src="/templates/out.js"></script>
+    <script>
+      window.s3Proxy.functions.fetchStyles();
+    </script>
 </html>
