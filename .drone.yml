@@ -16,6 +16,16 @@ steps:
   - npm run solid && npm run tailwind
   - docker build -t smasherofallthings/s3proxy . && docker push smasherofallthings/s3proxy
 
+- name: Push repo to github
+  commands:
+  - git remote add github https://github.com/smashthings/s3proxy.git
+  - git push -u github
+
+- name: Push repo to gitlab
+  commands:
+  - git remote add gitlab https://gitlab.com/scripteddog/s3proxy.git
+  - git push -u gitlab
+
 trigger:
   branch:
     - master
