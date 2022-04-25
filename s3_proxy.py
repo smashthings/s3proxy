@@ -9,6 +9,7 @@ import datetime
 import os
 import uuid
 import json
+import traceback
 
 ##############################################
 # Helpers
@@ -121,24 +122,37 @@ def LogResponses(res:flask.wrappers.Response):
   Log(loggingDetails)
   return res
 
-def GetObjects(prefix:str="", continueToken:str=""):
+def GetObjects(prefix:str="", continueToken:str="", delimiter:str="/"):
+  reqSettings = {
+    "Bucket": targetBucket,
+    "Delimiter": delimiter,
+    "Prefix": prefix
+  }
   if continueToken != "":
-    res = s3Client.list_objects_v2(Bucket=targetBucket, ContinuationToken=continueToken)
-  elif prefix != "":
-    res = s3Client.list_objects_v2(Bucket=targetBucket, Prefix=prefix)
-  else:
-    res = s3Client.list_objects_v2(Bucket=targetBucket, Prefix=prefix)
+    reqSettings["ContinuationToken"] = continueToken
+  res = s3Client.list_objects_v2(**reqSettings)
   pruned = {
     "objs": [],
     "token": ""
   }
-  for f in res['Contents']:
-    pruned['objs'].append({
-      "name": f["Key"],
-      "last_modified": f["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
-      "size": FmtSize(f["Size"]),
-      "link": f"/fetch/{f['Key']}"
-    })
+  if "CommonPrefixes" in res:
+    for f in res['CommonPrefixes']:
+      pruned['objs'].append({
+        "name": f["Prefix"],
+        "last_modified": "-",
+        "size": "-",
+        "link": f"javascript:window.s3Proxy.functions.setPrefix('{f['Prefix']}');window.s3Proxy.functions.getObjects()"
+      })
+  if "Contents" in res:
+    for f in res['Contents']:
+      if f["Key"] != prefix:
+        pruned['objs'].append({
+          "name": f["Key"],
+          "last_modified": f["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
+          "size": FmtSize(f["Size"]),
+          "link": f"/fetch/{f['Key']}"
+        })
+
   if 'IsTruncated' in res and res['IsTruncated'] and 'NextContinuationToken' in res:
     pruned['token'] = res["NextContinuationToken"]
   
@@ -152,20 +166,24 @@ def rHealthCheck():
     'status': 'online'
   }
 
-def rStaticContent(path):
-  t = f'templates/{path}'
+def rStaticContent(path:str=""):
+  if path == "":
+    t = f'templates{flask.request.full_path.rstrip("?")}'
+  else:
+    t = f'templates/{path}'
   if not os.path.exists(t):
-    return ResponseMaker(404, None, f"Static content at '{path}' not found on this server")
+    return ResponseMaker(404, None, f"Static content at '{t}' not found on this server")
   try:
     res = flask.make_response()
-    with open(t) as f:
+    with open(t, "rb") as f:
       res.set_data(f.read())
     res.status_code = 200
     t = mimetypes.guess_type(t)
     res.content_type = t if t is not None else "application/octet-stream"
     return res
-  except:
-    return ResponseMaker(500, None, f"Failed to read file at path '{path}', file exists but exception raised when attempting to return it")
+  except Exception as e:
+    traceback.print_exc()
+    return ResponseMaker(500, None, f"Failed to read file at path '{t}', file exists but exception raised when attempting to return it")
 
 def rIndexPage():
   return flask.render_template('index.html', bucket_name=targetBucket, region=awsRegion, account_number=awsAccountNumber)
@@ -181,9 +199,7 @@ def rFetchObject(key:str):
     res.status_code = 200
     return res
   except Exception as e:
-    print(key)
-    print(e)
-
+    traceback.print_exc()
     return ResponseMaker(500, None, f"Failed to fetch object at key '{key}', exception raised when attempting to handle it")
     return res
 
@@ -191,15 +207,14 @@ def rGetObjects():
   req = flask.request
   try:
     resBody = req.get_json(force=True)
-    if 'prefix' in resBody:
-      v = GetObjects(prefix=resBody['prefix'])
-    elif 'token' in resBody:
-      v = GetObjects(continueToken=resBody['token'])
-    else:
-      v = GetObjects()
-    
+    v = GetObjects(
+      prefix=resBody['prefix'] if 'prefix' in resBody else "",
+      delimiter=resBody['delimiter'] if 'delimiter' in resBody else "/",
+      continueToken=resBody['token'] if 'token' in resBody else ""
+      )    
     return ResponseMaker(200, v)
   except Exception as e:
+    traceback.print_exc()
     return ResponseMaker(500, None, reason=f"Failed to parse json in request with error {e}")
 
 ##############################################
@@ -209,6 +224,7 @@ RouteMapping("/", rIndexPage, ["GET"])
 RouteMapping("/templates/<path>", rStaticContent, ["GET"])
 RouteMapping("/fetch/<path:key>", rFetchObject, ["GET"])
 RouteMapping("/get-objects", rGetObjects, ["POST"])
+RouteMapping("/favicon.ico", rStaticContent, ["GET"])
 
 ##############################################
 # Main

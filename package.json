@@ -1,5 +1,16 @@
 {
-  "dependencies": {
+  "dependencies": {},
+  "scripts": {
+    "browser": "browser-sync start --server --files \"templates/*.html\" \"templates/*.css\"",
+    "python": "bash -c 'source dev/test.env && python3 s3_proxy.py'",
+    "solid": "./build.js",
+    "tailwind": "npx tailwindcss -o ./templates/out.css --config tailwind.config.js",
+    "refresh:fe": "nodemon --exec 'npm run solid && npm run tailwind' --ignore templates/out.js --watch 'templates/' --ext 'html' --ext 'jsx'",
+    "refresh:be": "nodemon --exec 'npm run python' --watch s3_proxy.py --ext 'py'",
+    "watch:browser": "run-p refresh:be refresh:fe browser",
+    "watch": "run-p refresh:be refresh:fe"
+  },
+  "devDependencies": {
     "browser-sync": "^2.27.9",
     "esbuild-plugin-solid": "^0.4.2",
     "nodemon": "^2.0.15",
@@ -7,19 +18,7 @@
     "postcss": "^8.4.12",
     "postcss-cli": "^9.1.0",
     "solid-js": "^1.3.15",
-    "tailwindcss": "^3.0.24"
-  },
-  "scripts": {
-    "browser": "browser-sync start --server --files \"templates/*.html\" \"templates/*.css\"",
-    "python": "bash -c 'source dev/test.env && python3 s3_proxy.py'",
-    "solid": "./build.js",
-    "tailwind": "npx tailwindcss -o ./templates/out.css --config tailwind.config.js",
-    "refresh:fe": "nodemon --exec 'npm run tailwind' --exec 'npm run solid' --ignore templates/out.js --watch 'templates' --ext 'html' --ext 'jsx'",
-    "refresh:be": "nodemon --exec 'npm run python' --watch s3_proxy.py --ext 'py'",
-    "watch:browser": "run-p refresh browser",
-    "watch": "run-p refresh:be refresh:fe"
-  },
-  "devDependencies": {
+    "tailwindcss": "^3.0.24",
     "esbuild": "^0.14.37",
     "esbuild-solid": "^0.0.1"
   }

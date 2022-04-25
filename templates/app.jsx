@@ -15,19 +15,35 @@ function Objs(){
   window.s3Proxy.signals.getObjs = getObjs;
   window.s3Proxy.signals.setObjs = setObjs;
 
-  let getObjects = function(token, prefix){
-    let successFunc = (resBody)=>{setObjs(JSON.parse(resBody)['response']['objs'])};
-    if (prefix){
-      window.s3Proxy.functions.postApi("/get-objects", {
-        "prefix": prefix
-      }, successFunc );
-    } else if (token) {
-      window.s3Proxy.functions.postApi("/get-objects", {
-        "token": token
-      }, successFunc );
-    } else {
-      window.s3Proxy.functions.postApi("/get-objects", {}, successFunc );
+  let getObjects = function(){
+    let postingDetails = {},
+      prefixEle = document.getElementById('searchPrefix'),
+      tokenEle = document.getElementById('searchToken'),
+      delimiterEle = document.getElementById('searchDelimiter');
+
+    if (prefixEle) {
+      postingDetails["prefix"] = prefixEle.value;
     }
+
+    if (tokenEle) {
+      postingDetails["token"] = tokenEle.value;
+    }
+
+    if (delimiterEle) {
+      postingDetails["delimiter"] = delimiterEle.value;
+    }
+
+    let successFunc = (resBody)=>{
+      let r = JSON.parse(resBody);
+      setObjs(r['response']['objs']);
+      if (r['response']['token']){
+        tokenEle.value = r['response']['token'];
+      }
+    };
+    
+    console.log("Fetching objects with settings:");
+    console.log(postingDetails);
+    window.s3Proxy.functions.postApi("/get-objects", postingDetails, successFunc );
   };
 
   window.s3Proxy.functions.getObjects = getObjects;
@@ -63,7 +79,7 @@ function Objs(){
           { item.size }
         </td>
         <td class="px-6 py-4 text-right">
-          <a href={ item.link } class="font-medium text-blue-600 dark:text-blue-500 hover:underline">link</a>
+          <a href={ item.link } class="font-medium text-blue-600 dark:text-blue-500 hover:underline">{ item.link.startsWith("javascript:") ? "List" : "Download"}</a>
         </td>
       </tr>
       }</For>
