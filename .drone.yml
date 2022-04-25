@@ -1,0 +1,24 @@
+kind: pipeline
+type: exec
+name: s3-proxy
+
+clone:
+  disable: true
+
+steps:
+- name: clone
+  commands:
+  - GIT_SSL_NO_VERIFY=true git clone -v $DRONE_GIT_HTTP_URL .
+  - GIT_SSL_NO_VERIFY=true git checkout $DRONE_COMMIT
+
+- name: Docker Image
+  commands:
+  - npm run solid && npm run tailwind
+  - docker build -t smasherofallthings/s3proxy . && docker push smasherofallthings/s3proxy
+
+trigger:
+  branch:
+    - master
+  event:
+    - push
+
