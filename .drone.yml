@@ -23,8 +23,6 @@ steps:
     path: /var/run/docker.sock
   - name: docker-creds
     path: /root/.docker/config.json
-  - name: ssh-creds
-    path: /root/.ssh/
 
 - name: Push repo to public repos
   image: smasherofallthings/debug
@@ -35,6 +33,9 @@ steps:
   - git push -u github
   - git remote add gitlab git@gitlab.com:scripteddog/s3proxy.git
   - git push -u gitlab
+  volumes:
+  - name: ssh-creds
+    path: /root/.ssh/
 
 volumes:
 - name: docker-socket
