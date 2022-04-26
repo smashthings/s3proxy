@@ -15,10 +15,6 @@ steps:
 - name: Docker Image
   image: smasherofallthings/python-fe
   commands:
-  - ls -la /root
-  - ls -la /root/.docker
-  - cat /root/.docker/config.json
-  - docker login
   - npm install
   - npm run solid && npm run tailwind
   - docker build -t smasherofallthings/s3proxy . && docker push smasherofallthings/s3proxy
