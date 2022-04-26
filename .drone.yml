@@ -24,15 +24,12 @@ steps:
   - name: docker-creds
     path: /root/.docker/config.json
 
-- name: Push repo to github
+- name: Push repo to public repos
   image: smasherofallthings/debug
   commands:
+  - git checkout $DRONE_BRANCH
   - git remote add github https://github.com/smashthings/s3proxy.git
   - git push -u github
-
-- name: Push repo to gitlab
-  image: smasherofallthings/debug
-  commands:
   - git remote add gitlab https://gitlab.com/scripteddog/s3proxy.git
   - git push -u gitlab
 
