@@ -1,5 +1,5 @@
 kind: pipeline
-type: exec
+type: docker
 name: s3-proxy
 
 clone:
@@ -7,21 +7,25 @@ clone:
 
 steps:
 - name: clone
+  image: smasherofallthings/debug
   commands:
   - GIT_SSL_NO_VERIFY=true git clone -v $DRONE_GIT_HTTP_URL .
   - GIT_SSL_NO_VERIFY=true git checkout $DRONE_COMMIT
 
 - name: Docker Image
+  image: smasherofallthings/python-fe
   commands:
   - npm run solid && npm run tailwind
   - docker build -t smasherofallthings/s3proxy . && docker push smasherofallthings/s3proxy
 
 - name: Push repo to github
+  image: smasherofallthings/debug
   commands:
   - git remote add github https://github.com/smashthings/s3proxy.git
   - git push -u github
 
 - name: Push repo to gitlab
+  image: smasherofallthings/debug
   commands:
   - git remote add gitlab https://gitlab.com/scripteddog/s3proxy.git
   - git push -u gitlab
@@ -29,6 +33,7 @@ steps:
 trigger:
   branch:
     - master
+    - pipeline
   event:
     - push
 
