@@ -18,6 +18,9 @@ steps:
   - npm install
   - npm run solid && npm run tailwind
   - docker build -t smasherofallthings/s3proxy . && docker push smasherofallthings/s3proxy
+  volumes:
+  - name: docker-socket
+    path: /var/run/docker.sock
 
 - name: Push repo to github
   image: smasherofallthings/debug
@@ -30,6 +33,11 @@ steps:
   commands:
   - git remote add gitlab https://gitlab.com/scripteddog/s3proxy.git
   - git push -u gitlab
+
+volumes:
+- name: docker-socket
+  host:
+    path: /var/run/docker.sock
 
 trigger:
   branch:
