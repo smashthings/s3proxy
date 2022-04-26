@@ -30,9 +30,9 @@ steps:
   image: smasherofallthings/debug
   commands:
   - git checkout $DRONE_BRANCH
-  - git remote add github https://github.com/smashthings/s3proxy.git
+  - git remote add github git@github.com:smashthings/s3proxy.git
   - git push -u github
-  - git remote add gitlab https://gitlab.com/scripteddog/s3proxy.git
+  - git remote add gitlab git@gitlab.com:scripteddog/s3proxy.git
   - git push -u gitlab
 
 volumes:
