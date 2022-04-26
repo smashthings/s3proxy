@@ -21,6 +21,8 @@ steps:
   volumes:
   - name: docker-socket
     path: /var/run/docker.sock
+  - name: docker-creds
+    path: /root/.docker/config.json
 
 - name: Push repo to github
   image: smasherofallthings/debug
@@ -38,6 +40,9 @@ volumes:
 - name: docker-socket
   host:
     path: /var/run/docker.sock
+- name: docker-creds
+  host:
+    path: /root/.docker/config.json
 
 trigger:
   branch:
