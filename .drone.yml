@@ -1,5 +1,5 @@
 kind: pipeline
-type: exec
+type: docker
 name: s3-proxy
 
 clone:
@@ -7,28 +7,51 @@ clone:
 
 steps:
 - name: clone
+  image: smasherofallthings/debug
   commands:
   - GIT_SSL_NO_VERIFY=true git clone -v $DRONE_GIT_HTTP_URL .
   - GIT_SSL_NO_VERIFY=true git checkout $DRONE_COMMIT
 
 - name: Docker Image
+  image: smasherofallthings/python-fe
   commands:
+  - npm install
   - npm run solid && npm run tailwind
   - docker build -t smasherofallthings/s3proxy . && docker push smasherofallthings/s3proxy
+  volumes:
+  - name: docker-socket
+    path: /var/run/docker.sock
+  - name: docker-creds
+    path: /root/.docker/config.json
 
-- name: Push repo to github
+- name: Push repo to public repos
+  image: smasherofallthings/debug
   commands:
-  - git remote add github https://github.com/smashthings/s3proxy.git
+  - git checkout $DRONE_BRANCH
+  - ls -al /root/.ssh
+  - git remote add github git@github.com:smashthings/s3proxy.git
   - git push -u github
-
-- name: Push repo to gitlab
-  commands:
-  - git remote add gitlab https://gitlab.com/scripteddog/s3proxy.git
+  - git remote add gitlab git@gitlab.com:scripteddog/s3proxy.git
   - git push -u gitlab
+  volumes:
+  - name: ssh-creds
+    path: /root/.ssh/
+
+volumes:
+- name: docker-socket
+  host:
+    path: /var/run/docker.sock
+- name: docker-creds
+  host:
+    path: /root/.docker/config.json
+- name: ssh-creds
+  host:
+    path: /root/.ssh/
 
 trigger:
   branch:
     - master
+    - pipeline
   event:
     - push
 
