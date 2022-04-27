@@ -20,19 +20,19 @@ For other optional configuration all the AWS environment variables apply as the 
 
 ## Routes
 
-*/*
+*/* \
 The index page which provides the HTML page for human focused browsing. The buttons make calls to the inbuilt API to populate with data
 
-*/templates/<path>*
+*/templates/<path>* \
 Contains static frontend content. Naming convention a hold over from Flask
 
-*/get-objects*
+*/get-objects* \
 The API endpoint to get a json response listing objects and prefixes based on the prefix, delimiter and token provided
 
-*/fetch/<path>*
+*/fetch/<path>* \
 A direct proxy for the underlying s3 key. So if on the bucket that you configure there's an object under key 'first-level/second-level/object-you-want.thing' then you can access it via the proxy at https://domain.s3proxy.com/fetch/first-level/second-level/object-you-want.thing
 
-*/healthcheck*
+*/healthcheck* \
 A healthcheck
 
 ## Deployment
