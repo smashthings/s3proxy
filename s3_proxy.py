@@ -198,6 +198,7 @@ def rFetchObject(key:str):
     res.set_data(thing['Body'].read())
     res.content_type = thing['ContentType']
     res.headers.add("Access-Control-Allow-Origin", "*")
+    res.headers.add("Access-Control-Request-Method", "GET")
     res.status_code = 200
     return res
   except Exception as e:
