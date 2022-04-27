@@ -197,6 +197,7 @@ def rFetchObject(key:str):
     res = flask.make_response()
     res.set_data(thing['Body'].read())
     res.content_type = thing['ContentType']
+    res.headers.add("Access-Control-Allow-Origin", "*")
     res.status_code = 200
     return res
   except Exception as e:
