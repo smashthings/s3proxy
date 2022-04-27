@@ -231,12 +231,15 @@ RouteMapping("/favicon.ico", rStaticContent, ["GET"])
 
 s3Proxy = flask.Flask("s3Proxy")
 
-Log("Loading VCL Template...")
-allTemplates["index"] = LoadTemplate(f"{scriptDir}/templates/index.html")
+Log("Loading all Templates...")
+allTemplates["index.html"] = LoadTemplate(f"{scriptDir}/templates/index.html")
+for f in allTemplates.keys():
+  Log(f'- {f}')
 
 Log("Loading routes...")
 for r in RouteList:
   s3Proxy.route(r.route, methods=r.methods)(r.handler)
+  Log(f'- {r.route}')
 
 s3Proxy.after_request(LogResponses)
 
