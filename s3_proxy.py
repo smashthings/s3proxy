@@ -34,7 +34,7 @@ def LoadTemplate(fileLocation:str):
   fData = None
   with open(fileLocation) as f:
     fData = f.read()
-  t = jinja2.Template(fData)
+  t = jenv.from_string(fData)
   return t
 
 def FmtSize(num, suffix='B'):
@@ -66,6 +66,7 @@ allTemplates = {}
 targetBucket = os.getenv("TARGET_BUCKET") if "TARGET_BUCKET" in os.environ else ""
 awsRegion = os.getenv("BUCKET_AWS_REGION") if "BUCKET_AWS_REGION" in os.environ else ""
 awsAccountNumber = boto3.client('sts').get_caller_identity().get('Account')
+jenv = jinja2.Environment(loader=jinja2.BaseLoader())
 
 Log(f'''Running with settings:
 - Bucket Name => {targetBucket}
@@ -168,9 +169,9 @@ def rHealthCheck():
 
 def rStaticContent(path:str=""):
   if path == "":
-    t = f'templates{flask.request.full_path.rstrip("?")}'
+    t = f'{scriptDir}/templates{flask.request.full_path.rstrip("?")}'
   else:
-    t = f'templates/{path}'
+    t = f'{scriptDir}/templates/{path}'
   if not os.path.exists(t):
     return ResponseMaker(404, None, f"Static content at '{t}' not found on this server")
   try:
@@ -186,7 +187,7 @@ def rStaticContent(path:str=""):
     return ResponseMaker(500, None, f"Failed to read file at path '{t}', file exists but exception raised when attempting to return it")
 
 def rIndexPage():
-  return flask.render_template('index.html', bucket_name=targetBucket, region=awsRegion, account_number=awsAccountNumber)
+  return allTemplates["index.html"].render(bucket_name=targetBucket, region=awsRegion, account_number=awsAccountNumber)
 
 def rFetchObject(key:str):
   try:
