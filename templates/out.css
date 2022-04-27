@@ -663,6 +663,10 @@ Ensure the default browser behavior of the `hidden` attribute.
   text-align: left;
 }
 
+.text-center {
+  text-align: center;
+}
+
 .text-right {
   text-align: right;
 }

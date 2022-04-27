@@ -712,6 +712,11 @@
   // node_modules/solid-js/web/dist/web.js
   var booleans = ["allowfullscreen", "async", "autofocus", "autoplay", "checked", "controls", "default", "disabled", "formnovalidate", "hidden", "indeterminate", "ismap", "loop", "multiple", "muted", "nomodule", "novalidate", "open", "playsinline", "readonly", "required", "reversed", "seamless", "selected"];
   var Properties = /* @__PURE__ */ new Set(["className", "value", "readOnly", "formNoValidate", "isMap", "noModule", "playsInline", ...booleans]);
+  function memo(fn, equals) {
+    return createMemo(fn, void 0, !equals ? {
+      equals
+    } : void 0);
+  }
   function reconcileArrays(parentNode, a, b) {
     let bLength = b.length, aEnd = a.length, bEnd = bLength, aStart = 0, bStart = 0, after = a[aEnd - 1].nextSibling, map = null;
     while (aStart < aEnd || bStart < bEnd) {
@@ -934,8 +939,9 @@
   }
 
   // templates/app.jsx
-  var _tmpl$ = /* @__PURE__ */ template(`<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400"><thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"><tr><th scope="col" class="px-6 py-3">Object</th><th scope="col" class="px-6 py-3">Last Modified</th><th scope="col" class="px-6 py-3">Size</th><th scope="col" class="px-6 py-3"><span class="sr-only">Edit</span></th></tr></thead><tbody></tbody></table>`, 18);
-  var _tmpl$2 = /* @__PURE__ */ template(`<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"><th scope="row" class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap"></th><td class="px-6 py-4"></td><td class="px-6 py-4"></td><td class="px-6 py-4 text-right"><a class="font-medium text-blue-600 dark:text-blue-500 hover:underline"></a></td></tr>`, 12);
+  var _tmpl$ = /* @__PURE__ */ template(`<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">Object</th><th scope="col" class="px-6 py-3">Last Modified</th><th scope="col" class="px-6 py-3">Size</th><th scope="col" class="px-6 py-3"><span class="sr-only">Edit</span></th></tr></thead><tbody></tbody></table>`, 18);
+  var _tmpl$2 = /* @__PURE__ */ template(`<tr class="bg-white border-b hover:bg-gray-50"><th scope="row" class="px-6 py-4 font-medium text-gray-600 whitespace-nowrap"></th><td class="px-6 py-4"></td><td class="px-6 py-4"></td><td class="px-6 py-4 text-right"><a class="font-medium text-blue-600 hover:underline"></a></td></tr>`, 12);
+  var _tmpl$3 = /* @__PURE__ */ template(`<tr class="bg-white border-b hover:bg-gray-50 text-gray-300/50" style="color: rgba(0, 0, 0, 0.5);"><th scope="row" class="px-6 py-4 font-medium text-gray-300/50 text-center whitespace-nowrap" colspan="4">this bucket is empty!</th></tr>`, 4);
   function Objs() {
     const [getObjs, setObjs] = createSignal([{
       "name": "-",
@@ -970,20 +976,23 @@
     window.s3Proxy.functions.getObjects = getObjects;
     return (() => {
       const _el$ = _tmpl$.cloneNode(true), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
-      insert(_el$3, createComponent(For, {
-        get each() {
-          return getObjs();
-        },
-        children: (item, index) => (() => {
-          const _el$4 = _tmpl$2.cloneNode(true), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.firstChild;
-          insert(_el$5, () => item.name);
-          insert(_el$6, () => item.last_modified);
-          insert(_el$7, () => item.size);
-          insert(_el$9, () => item.link.startsWith("javascript:") ? "List" : "Download");
-          createRenderEffect(() => setAttribute(_el$9, "href", item.link));
-          return _el$4;
-        })()
-      }));
+      insert(_el$3, (() => {
+        const _c$ = memo(() => getObjs().length > 0, true);
+        return () => _c$() ? createComponent(For, {
+          get each() {
+            return getObjs();
+          },
+          children: (item, index) => (() => {
+            const _el$4 = _tmpl$2.cloneNode(true), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.firstChild;
+            insert(_el$5, () => item.name);
+            insert(_el$6, () => item.last_modified);
+            insert(_el$7, () => item.size);
+            insert(_el$9, () => item.link.startsWith("javascript:") ? "List" : "Download");
+            createRenderEffect(() => setAttribute(_el$9, "href", item.link));
+            return _el$4;
+          })()
+        }) : _tmpl$3.cloneNode(true);
+      })());
       return _el$;
     })();
   }
