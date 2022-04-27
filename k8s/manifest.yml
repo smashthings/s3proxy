@@ -1,0 +1,48 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: "s3proxy-{{ bucket_name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s3proxy
+      bucket: "{{ bucket_name }}"
+  template:
+    metadata:
+      labels:
+        app: s3proxy
+        bucket: "{{ bucket_name }}"
+    spec:
+      {% if service_account is defined %}
+      serviceAccountName: "{{ service_account }}"
+      automountServiceAccountToken: true
+      {% endif %}
+      containers:
+        - name: s3proxy
+          image: smasherofallthings/s3proxy
+          ports:
+            - containerPort: 5000
+          env:
+          - name: "TARGET_BUCKET"
+            value: "{{ bucket_name }}"
+          - name: "BUCKET_AWS_REGION"
+            value: "{{ bucket_aws_region }}"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: "s3proxy-{{ bucket_name }}"
+spec:
+  selector:
+    app: s3proxy
+    bucket: "{{ bucket_name }}"
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+    name: app-port
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+    name: http-port

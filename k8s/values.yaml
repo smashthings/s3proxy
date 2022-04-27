@@ -1,0 +1,3 @@
+bucket_name: "s3-bucket"
+bucket_aws_region: "aws-region"
+service_account: "aws-iam-role-arn"

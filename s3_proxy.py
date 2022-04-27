@@ -64,7 +64,7 @@ def ResponseMaker(statusCode:int, data, reason:str=""):
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 allTemplates = {}
 targetBucket = os.getenv("TARGET_BUCKET") if "TARGET_BUCKET" in os.environ else ""
-awsRegion = os.getenv("AWS_REGION") if "AWS_REGION" in os.environ else ""
+awsRegion = os.getenv("BUCKET_AWS_REGION") if "BUCKET_AWS_REGION" in os.environ else ""
 awsAccountNumber = boto3.client('sts').get_caller_identity().get('Account')
 
 Log(f'''Running with settings:
@@ -80,7 +80,7 @@ if targetBucket == "":
   Log("Did not find environment variable TARGET_BUCKET populated, exiting!", quit=True)
 
 if awsRegion == "":
-  Log("Did not find environment variable AWS_REGION populated, exiting!", quit=True)
+  Log("Did not find environment variable BUCKET_AWS_REGION populated, exiting!", quit=True)
 
 
 ##############################################
