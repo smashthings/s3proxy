@@ -47,6 +47,7 @@
                 let ele = document.createElement("style");
                 ele.innerHTML = data;
                 document.body.appendChild(ele);
+                document.getElementsByTagName('body')[0].style.display = "block";
               });
             },
             setPrefix: function(prefix){
@@ -65,7 +66,7 @@
       </script>
     </head>
 
-    <body class="text-gray-700">
+    <body class="text-gray-700" style="display:none">
       <div class="mx-auto px-4 min-h-screen max-w-screen-xl flex-col">
         <div>
           <div class="pt-8 text-2xl">
@@ -117,10 +118,9 @@
         </div>
       </div>
     </body>
-
-    <script src="/templates/out.js"></script>
     <script>
       window.s3Proxy.functions.fetchStyles();
     </script>
+    <script src="/templates/out.js"></script>
 </html>
 
