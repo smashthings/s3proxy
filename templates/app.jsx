@@ -70,7 +70,7 @@ function Objs(){
       <For each={getObjs()}>{(item, index) =>
         <tr className="bg-white border-b hover:bg-gray-50">
           <th scope="row" className="px-6 py-4 font-medium text-gray-600 whitespace-nowrap">
-            { item.name }
+            <a href={ item.link } className="font-medium text-blue-600 hover:underline">{ item.name }</a>
           </th>
           <td className="px-6 py-4">
             { item.last_modified }
