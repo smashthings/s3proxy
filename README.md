@@ -18,6 +18,14 @@ BUCKET_AWS_REGION => The region of the S3 bucket
 
 For other optional configuration all the AWS environment variables apply as the s3proxy is using boto3 underneath, for example AWS_PROFILE will change the profile to use, etc.
 
+Additionally you may want to set common headers for stuff like CORS. You can do this with a prefixed environment variable: **S3PROXYHEADER_**. So for allowing for GET, HEAD and OPTIONS requests from any origin:
+
+> S3PROXYHEADER_Access_Control_Allow_Origin="*"
+> S3PROXYHEADER_Access_Control_Allow_Methods="GET,HEAD,OPTIONS"
+> S3PROXYHEADER_Access_Control_Max_Age="86400"
+
+Underscores after S3PROXYHEADER_ are turned into hyphens.
+
 ## Routes
 
 */* \

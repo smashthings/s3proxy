@@ -83,6 +83,11 @@ if targetBucket == "":
 if awsRegion == "":
   Log("Did not find environment variable BUCKET_AWS_REGION populated, exiting!", quit=True)
 
+commonHeaders = {}
+
+for f in os.environ:
+  if f[0:14] == "S3PROXYHEADER_":
+    commonHeaders[f[14:].replace('_', "-")] = os.environ[f]
 
 ##############################################
 # Routing
@@ -233,6 +238,13 @@ RouteMapping("/favicon.ico", rStaticContent, ["GET"])
 # Main
 
 s3Proxy = flask.Flask("s3Proxy")
+
+if commonHeaders:
+  @s3Proxy.after_request
+  def commonResponseHeaders(res):
+    for f in commonHeaders:
+      res.headers[f] = commonHeaders[f]
+    return res
 
 Log("Loading all Templates...")
 allTemplates["index.html"] = LoadTemplate(f"{scriptDir}/templates/index.html")
