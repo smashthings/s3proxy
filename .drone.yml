@@ -17,8 +17,7 @@ steps:
   commands:
   - npm install
   - npm run solid && npm run tailwind
-  - printf "Building docker image with command\ndocker build -t smasherofallthings/s3proxy:latest smasherofallthings/s3proxy:$(date '+%Y-%m-%d')-b${DRONE_BUILD_NUMBER}
-  - docker build -t smasherofallthings/s3proxy:latest "smasherofallthings/s3proxy:$$(date '+%Y-%m-%d')-b$${DRONE_BUILD_NUMBER}" . && docker push smasherofallthings/s3proxy --all-tags
+  - docker build -t smasherofallthings/s3proxy:latest -t "smasherofallthings/s3proxy:$$(date '+%Y-%m-%d')-b$${DRONE_BUILD_NUMBER}" . && docker push smasherofallthings/s3proxy --all-tags
   volumes:
   - name: docker-socket
     path: /var/run/docker.sock
