@@ -1,126 +1,71 @@
 <!DOCTYPE html>
 
 <html>
-    <head>
-      <link rel="stylesheet" href="templates/out.css" type="text/css" />
-      <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <script>
-        window.s3Proxy = {
-          functions: {
-            ready: function(fn) {
-              if (document.readyState != 'loading'){
-                fn();
-              } else {
-                document.addEventListener('DOMContentLoaded', fn);
-              }
-            },
-            postApi: function(path, data, successFunc, errFunc){
-              var request = new XMLHttpRequest();
-              request.open('POST', window.location.origin + (path.startsWith("/") ? path : "/" + path), true);
-              request.setRequestHeader('Content-Type', 'application/json');
-              request.onload = function() {
-                let statusReason = "";
-                try {
-                  let jBody = JSON.parse(this.responseText);
-                  if (jBody.reason) {
-                    statusReason = ` - ${jBody.reason}`;
-                  }
-                } catch {}
-                if (this.status >= 200 && this.status < 400) {
-                  if (successFunc){
-                    successFunc(this.responseText);
-                  };
-                } else {
-                  window.alert(`tracr.functions.postApi(${path}): Failed POST request to ${path} with status of ${this.status}${statusReason}`);
-                  if (errFunc) {
-                    errFunc();
-                  };
-                };
-              };
-              request.send(JSON.stringify(data));
-            },
-            fetchStyles: async function(){
-              fetch("/templates/out.css")
-              .then(response => response.text())
-              .then((data) => {
-                let ele = document.createElement("style");
-                ele.innerHTML = data;
-                document.body.appendChild(ele);
-                document.getElementsByTagName('body')[0].style.display = "block";
-              });
-            },
-            setPrefix: function(prefix){
-              document.getElementById('searchPrefix').value = prefix;
-            },
-            reset: function(){
-              document.getElementById('searchPrefix').value = "";
-              document.getElementById('searchDelimiter').value = "/";
-              document.getElementById('searchToken').value = "";
-              window.s3Proxy.functions.getObjects();
-            }
-          },
-          parsedData: {},
-          signals: {}
-        };
-      </script>
-    </head>
+  <head>
+    {% raw %}
+    <title>s3-proxy | {{ bucket_name }} </title>
+    {% endraw %}
+    {{ (path.templatedir + "/head.html") | nested_template }}
+  </head>
 
-    <body class="text-gray-700" style="display:none">
-      <div class="mx-auto px-4 min-h-screen max-w-screen-xl flex-col">
-        <div>
-          <div class="pt-8 text-2xl">
-            S3 Proxy
-          </div>
-          <div class="pb-6 text-sm">
-            {{ bucket_name }} - {{ region }} - {{ account_number }}
-          </div>
+  <body class="text-gray-700">
+    <div class="mx-auto px-4 min-h-screen max-w-screen-xl flex-col">
+      <div>
+        <div class="pt-8 text-2xl font-bold">
+          S3 Proxy
         </div>
-        <div id="searchElements" class="flex mb-4">
-
-          <div class="w-1/3 m-1 relative">
-            <label for="prefix" class="block text-sm font-medium text-gray-700">Prefix</label>
-            <div class="mt-1 relative rounded-md shadow-sm">
-              <input type="text" name="prefix" id="searchPrefix" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md">
-            </div>
-            <div class="absolute inset-y-0 right-0 flex py-1.5 pr-1.5 cursor-pointer hover:font-extrabold h-1/2" onclick="document.getElementById('searchPrefix').value = '';">
-              <div class="inline-flex items-center rounded px-2 text-sm font-sans font-bold text-gray-400"> X </div>
-            </div>
-          </div>
-
-          <div class="w-1/3  m-1 relative">
-            <label for="delimiter" class="block text-sm font-medium text-gray-700">Delimiter</label>
-            <div class="mt-1 relative rounded-md shadow-sm">
-              <input type="text" name="delimiter" id="searchDelimiter" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md" value="/">
-            </div>
-            <div class="absolute inset-y-0 right-0 flex py-1.5 pr-1.5 cursor-pointer hover:font-extrabold h-1/2" onclick="document.getElementById('searchDelimiter').value = '';">
-              <div class="inline-flex items-center rounded px-2 text-sm font-sans font-bold text-gray-400"> X </div>
-            </div>
-
-          </div>
-
-          <div class="w-1/3  m-1 relative">
-            <label for="token" class="block text-sm font-medium text-gray-700">Token</label>
-            <div class="mt-1 relative rounded-md shadow-sm">
-              <input type="text" name="token" id="searchToken" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md">
-            </div>
-            <div class="absolute inset-y-0 right-0 flex py-1.5 pr-1.5 cursor-pointer hover:font-extrabold h-1/2" onclick="document.getElementById('searchToken').value = '';">
-              <div class="inline-flex items-center rounded px-2 text-sm font-sans font-bold text-gray-400"> X </div>
-            </div>
-          </div>
-
-        </div>
-        <div class="flex justify-center items-center mb-4">
-          <button type="button" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-lightBlue hover:bg-activeBlue focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" style="color:white; transition: background-color 0.5s ease;" onclick="window.s3Proxy.functions.getObjects();">Filter</button>
-          <button type="button" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-lightBlue hover:bg-activeBlue focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" style="color:white; transition: background-color 0.5s ease;" onclick="window.s3Proxy.functions.reset();">Reset</button>
-        </div>
-        <div id="objectTable">
+        <div class="pt-2 pb-6 text-sm">
+          {% raw %}
+          <span class="px-2 text-white bg-teal-600 rounded py-1">{{ bucket_name }}</span> / {{ region }} / {{ account_number }}
+          {% endraw %}
         </div>
       </div>
-    </body>
-    <script>
-      window.s3Proxy.functions.fetchStyles();
-    </script>
-    <script src="/templates/out.js"></script>
+      <div id="searchElements" class="flex mb-4">
+
+        <div class="w-1/3 m-1 relative">
+          <div class="inset-y-0 flex items-center pr-1.5 cursor-pointer hover:font-extrabold h-1/2" onclick="document.getElementById('searchPrefix').value = '';">
+            <label for="prefix" class="block text-sm font-medium text-gray-700 grow">Prefix</label>
+            <div class="px-2 text-sm text-gray-400">Clear</div>
+          </div>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <input type="text" name="prefix" id="searchPrefix" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 px-2">
+          </div>
+        </div>
+
+        <div class="w-1/3  m-1 relative">
+          <div class="inset-y-0 flex items-center pr-1.5 cursor-pointer hover:font-extrabold h-1/2" onclick="document.getElementById('searchDelimiter').value = '';">
+            <label for="delimiter" class="block text-sm font-medium text-gray-700 grow">Delimiter</label>
+            <div class="px-2 text-sm text-gray-400">Clear</div>
+          </div>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <input type="text" name="delimiter" id="searchDelimiter" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 px-2" value="/">
+          </div>
+
+        </div>
+
+        <div class="w-1/3  m-1 relative">
+          <div class="inset-y-0 flex items-center pr-1.5 cursor-pointer hover:font-extrabold h-1/2" onclick="document.getElementById('searchToken').value = '';">
+            <label for="token" class="block text-sm font-medium text-gray-700 grow">Token</label>
+            <div class="px-2 text-sm text-gray-400">Clear</div>
+          </div>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <input type="text" name="token" id="searchToken" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 px-2">
+          </div>
+        </div>
+
+      </div>
+      <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
+      <div id="objectTable">
+      </div>
+    </div>
+
+    <div aria-live="assertive" class="pointer-events-none fixed inset-x-0 bottom-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-10">
+      <div class="flex w-full flex-col items-center space-y-4 sm:items-end" id="notificationsContainer"></div>
+    </div>
+
+  </body>
+  <script>
+    {{ (path.templatedir + "/../dist/out.js") | file_content }}
+  </script>
 </html>
 

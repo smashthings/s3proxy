@@ -1,0 +1,15 @@
+{
+  "restartable": "rs",
+  "ignore": [
+    ".git",
+    "**/node_modules",
+    "dist/"
+  ],
+  "watch": [
+    "index.html",
+    "s3_proxy.py",
+    "templates/"
+  ],
+  "verbose": true,
+  "ext": "js,jsx,html,py"
+}

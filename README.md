@@ -11,12 +11,41 @@ s3proxy is a web interface for S3 buckets providing access to S3 objects with a 
 
 ## Configuration
 
-This is a container centric application so is configured with two required environment variables.
+If you don't provide any configuration then on start the server will ask you to provide the required credentials and target bucket:
 
-TARGET_BUCKET => The name of the bucket to proxy
-BUCKET_AWS_REGION => The region of the S3 bucket
+<p align="center">
+  <img src="./other/settings.png">
+</p>
 
-For other optional configuration all the AWS environment variables apply as the s3proxy is using boto3 underneath, for example AWS_PROFILE will change the profile to use, etc.
+If you get any issues then you'll get friendly notifications telling you what went wrong, otherwise you'll get a link straight to your bucket
+
+<p align="center">
+  <img src="./other/bucket.png">
+</p>
+
+## Usage
+
+Regular files are available to download with the `Download` links. "Directories" are not actually directories in S3 world, they're prefixes to object names. If there's a common prefix you'll get a `List` option rather than a download. When you click on that the page will repopulate with objects that only have that prefix.
+
+It'll feel just like a file system browser but in the background there's that framing of prefixes vs directories.
+
+#### Direct Proxying
+
+Each object in the bucket can be accessible via `/fetch/<object-name>`. For example, if you had a company logo in your bucket at `s3://companybucket.com/company-images/logo.png` then after targeting s3-proxy to the bucket `companybucket.com` and giving it the required credentials you can hit `http://s3proxy.local/fetch/company-images/logo.png` and get your logo.
+
+
+
+You can either provide access key + secret or mount a credentials file and provide a profile to use. If you're mounting your credentials and config files you'll need to target the path for your mount with the below AWS variables.
+
+Aside from the settings page, you can preseed the container with the same relative combination of AWS variables.
+
+## Variables
+
+#### s3_proxy
+
+```
+TARGET_BUCKET => The name of the bucket to target. If you don't provide this as an environment variable to the container then you'll get the settings page
+```
 
 Additionally you may want to set common headers for stuff like CORS. You can do this with a prefixed environment variable: **S3PROXYHEADER_**. So for allowing for GET, HEAD and OPTIONS requests from any origin:
 
@@ -26,22 +55,25 @@ Additionally you may want to set common headers for stuff like CORS. You can do 
 
 Underscores after S3PROXYHEADER_ are turned into hyphens.
 
-## Routes
+#### AWS
 
-*/* \
-The index page which provides the HTML page for human focused browsing. The buttons make calls to the inbuilt API to populate with data
+```
+# Either:
 
-*/templates/<path>* \
-Contains static frontend content. Naming convention a hold over from Flask
+AWS_ACCESS_KEY_ID => Your user key ID
+AWS_SECRET_ACCESS_KEY => Your user secret
 
-*/get-objects* \
-The API endpoint to get a json response listing objects and prefixes based on the prefix, delimiter and token provided
+# -or-
 
-*/fetch/<path>* \
-A direct proxy for the underlying s3 key. So if on the bucket that you configure there's an object under key 'first-level/second-level/object-you-want.thing' then you can access it via the proxy at https://domain.s3proxy.com/fetch/first-level/second-level/object-you-want.thing
+AWS_DEFAULT_PROFILE => The AWS profile to use
+AWS_SHARED_CREDENTIALS_FILE => The location where you've mounted your credentials file with the desired profile
+AWS_CONFIG_FILE => The location where you've mounted your config file with the desired profile
 
-*/healthcheck* \
-A healthcheck
+# -and optionally-
+
+AWS_DEFAULT_REGION => Set this to your bucket's region if you're having issues
+
+```
 
 ## Deployment
 

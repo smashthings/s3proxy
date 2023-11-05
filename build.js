@@ -6,8 +6,8 @@ const { solidPlugin } = require("esbuild-plugin-solid");
 build({
   entryPoints: ["templates/app.jsx"],
   bundle: true,
-  outfile: "templates/out.js",
-  minify: false,
+  outfile: "dist/out.js",
+  minify: true,
   loader: {
     ".svg": "dataurl",
   },

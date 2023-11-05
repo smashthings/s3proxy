@@ -1,14 +1,15 @@
 {
   "dependencies": {},
   "scripts": {
-    "browser": "browser-sync start --server --files \"templates/*.html\" \"templates/*.css\"",
-    "python": "bash -c 'source dev/test.env && python3 s3_proxy.py'",
+    "browser": "browser-sync start --server --files \"dist/*.html\"",
     "solid": "./build.js",
-    "tailwind": "npx tailwindcss -o ./templates/out.css --config tailwind.config.js",
-    "refresh:fe": "nodemon --exec 'npm run solid && npm run tailwind' --ignore templates/out.js --watch 'templates/' --ext 'html' --ext 'jsx'",
-    "refresh:be": "nodemon --exec 'npm run python' --watch s3_proxy.py --ext 'py'",
-    "watch:browser": "run-p refresh:be refresh:fe browser",
-    "watch": "run-p refresh:be refresh:fe"
+    "tailwind": "npx tailwindcss -o ./dist/out.css --config tailwind.config.js",
+    "tailwind:prod": "npx tailwindcss -o ./dist/out.css --config tailwind.config.js --minify",
+    "jinny": "jinny -e 'debug=true' -t templates/index.html templates/settings.html --dump-to-dir-no-index dist/",
+    "jinny:prod": "jinny -e -t templates/index.html templates/settings.html --dump-to-dir-no-index dist/",
+    "python": "python3 s3_proxy.py",
+    "watch": "nodemon --exec 'npm run solid && npm run tailwind && npm run jinny && npm run python'",
+    "prod": "npm run solid && npm run tailwind:prod && npm run jinny:prod"
   },
   "devDependencies": {
     "browser-sync": "^2.27.9",

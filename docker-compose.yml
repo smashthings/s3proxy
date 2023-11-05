@@ -1,0 +1,30 @@
+version: '3.1'
+
+services:
+  dev:
+    image: smasherofallthings/python-fe
+    restart: "no"
+    network_mode: host
+    environment:
+      HOME: /interactive
+      PYTHONUNBUFFERED: "true"
+    entrypoint:
+      - npm
+      - run
+      - watch
+    volumes:
+      - .:/interactive
+    working_dir: "/interactive"
+    env_file:
+      - ./dev/test.env
+
+  prod:
+    image: smasherofallthings/s3proxy:latest
+    ports:
+      - 3000:3000
+    build:
+      context: '.'
+      dockerfile: Dockerfile
+      args:
+        BASEIMAGE: smasherofallthings/flask-waitress
+        FE_BUILD: smasherofallthings/python-fe

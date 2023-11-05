@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>s3-proxy | Settings </title>
+    {{ (path.templatedir + "/head.html") | nested_template }}
+  </head>
+
+  <body class="text-gray-700">
+    <main class="mx-auto max-w-lg px-4 pb-12 pt-10 lg:pb-16">
+      <div class="space-y-6">
+        <div>
+          <h1 class="text-lg font-medium leading-6 text-gray-900">s3-proxy Settings</h1>
+          <p class="mt-1 text-sm text-gray-500">This server needs setup! Please complete the below fields...</p>
+        </div>
+  
+        <div>
+          <label for="bucket-name" class="block text-sm font-medium leading-6 text-gray-900">Bucket Name</label>
+          <div class="mt-2">
+            <input type="text" name="bucket-name" id="bucket-name" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-500 sm:text-sm sm:leading-6 px-2" value="">
+          </div>
+        </div>
+
+        <div>
+          <label for="aws-region" class="block text-sm font-medium leading-6 text-gray-900">AWS Region</label>
+          <div class="mt-2">
+            <input type="text" name="aws-region" id="aws-region" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-500 sm:text-sm sm:leading-6 px-2" value="eu-west-2" list="aws-region-list">
+            <datalist id="aws-region-list">
+              <option value="us-west-1"></option>
+              <option value="us-west-2"></option>
+              <option value="us-east-1"></option>
+              <option value="us-east-2"></option>
+              <option value="ca-central-1"></option>
+              <option value="ca-central-1"></option>
+              <option value="eu-west-1"></option>
+              <option value="eu-west-2"></option>
+              <option value="eu-west-3"></option>
+              <option value="eu-central-1"></option>
+              <option value="eu-south-1"></option>
+              <option value="eu-south-2"></option>
+              <option value="eu-north-1"></option>
+              <option value="af-south-1"></option>
+              <option value="ap-east-1"></option>
+              <option value="ap-south-1"></option>
+              <option value="ap-southeast-1"></option>
+              <option value="ap-southeast-2"></option>
+              <option value="ap-southeast-3"></option>
+              <option value="ap-southeast-4"></option>
+              <option value="ap-northeast-1"></option>
+              <option value="ap-northeast-2"></option>
+              <option value="ap-northeast-3"></option>
+              <option value="il-central-1"></option>
+              <option value="me-south-1"></option>
+              <option value="me-central-1"></option>
+              <option value="sa-east-1"></option>
+              <option value="us-gov-east-1"></option>
+              <option value="us-gov-west-1"></option>
+            </datalist>
+          </div>
+        </div>
+
+        <hr class="h-px my-4 bg-gray-200 border-0 dark:bg-gray-700">
+  
+        <div>
+          <label for="aws-profile" class="block text-sm font-medium leading-6 text-gray-900">AWS Profile</label>
+          <div class="mt-2">
+            <input type="text" name="aws-profile" id="aws-profile" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-500 sm:text-sm sm:leading-6 px-2" value="">
+          </div>
+        </div>
+
+        <hr class="h-px my-4 bg-gray-200 border-0 dark:bg-gray-300">
+  
+        <div>
+          <label for="aws-access-key" class="block text-sm font-medium leading-6 text-gray-900">AWS Access Key</label>
+          <div class="mt-2">
+            <input type="text" name="aws-access-key" id="aws-access-key" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-500 sm:text-sm sm:leading-6 px-2" value="">
+          </div>
+        </div>
+
+        <div>
+          <label for="aws-secret-key" class="block text-sm font-medium leading-6 text-gray-900">AWS Secret Key</label>
+          <div class="mt-2">
+            <input type="text" name="aws-secret-key" id="aws-secret-key" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-500 sm:text-sm sm:leading-6 px-2" value="" onfocus="window.s3Proxy.functions.censor(this);">
+          </div>
+        </div>
+
+        <hr class="h-px my-4 bg-gray-200 border-0 dark:bg-gray-700">
+  
+        <div class="flex justify-center gap-x-3">
+          <button class="rounded-md bg-teal-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500" onclick="window.s3Proxy.functions.checkSettings()">Confirm & Test</button>
+        </div>
+      </div>
+    </main>
+
+    <div aria-live="assertive" class="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-10">
+      <div class="flex w-full flex-col items-center space-y-4 sm:items-end" id="notificationsContainer"></div>
+    </div>
+
+  </body>
+
+  <script>
+    {{ (path.templatedir + "/../dist/out.js") | file_content }}
+  </script>
+</html>

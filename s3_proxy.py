@@ -59,29 +59,111 @@ def ResponseMaker(statusCode:int, data, reason:str=""):
   return (json.dumps(returning), statusCode)
 
 ##############################################
+# Settings Class
+
+class AppSettings():
+  def __init__(self, targetBucket:str=None, awsRegion:str=None, awsProfile:str=None, awsAccessKey:str=None, awsSecretKey:str=None):
+    self.targetBucket = targetBucket
+    self.awsRegion = awsRegion
+    self.awsAccessKey = awsAccessKey
+    self.awsSecretKey = awsSecretKey
+    self.awsProfile = awsProfile
+    self.status = "Awaiting tests"
+
+    if not self.targetBucket:
+      self.status = "The bucket name was not provided!"
+      self.Ready = False
+      return
+    if self.awsAccessKey and self.awsAccessKey:
+      self.awsSession = boto3.Session(
+        aws_access_key_id=self.awsAccessKey,
+        aws_secret_access_key=self.awsSecretKey,
+        region_name=self.awsRegion
+        )
+      self.status = "Session configured with keys"
+    elif self.awsProfile:
+      self.awsSession = boto3.Session(
+        profile_name=self.awsProfile,
+        region_name=self.awsRegion
+        )
+      self.status = f"Session configured with profile name '{awsProfile}'"
+
+    self.awsAccountNumber = None
+    self.s3Client = self.awsSession.client('s3')
+    self.stsClient = self.awsSession.client('sts')
+    self.Ready = False
+
+  def check_access(self):
+    if not self.targetBucket:
+      Log(f"AppSettings.check_access(): Target bucket setting not provided!")
+      return False
+    res = self.check_aws_access()
+    if res == False:
+      return False
+    res2 = self.check_bucket_access()
+    if res2 == False:
+      return False
+    return True
+
+  def check_aws_access(self):
+    try:
+      c = self.stsClient.get_caller_identity()
+      self.awsAccountNumber = c.get('Account')
+      return True
+    except Exception as e:
+      Log(f"AppSettings.check_aws_access(): Failed to call STS with stashed AWS session with the following exception:")
+      self.status = "Failed STS call with exception"
+      traceback.print_exc()
+      return False
+
+  def check_bucket_access(self):
+    if not self.awsAccountNumber:
+      res = self.check_aws_access()
+      if not res:
+        return False
+    try:
+      s3Res = self.s3Client.get_bucket_acl(Bucket=self.targetBucket)
+      if not self.awsRegion:
+        regionReq = self.s3Client.get_bucket_location(Bucket=self.targetBucket)
+        self.awsRegion = regionReq['LocationConstraint']
+      self.Ready = True
+      self.status = "Ready to serve"
+      return True
+    except Exception as e:
+      self.status = f"Failed S3 access call to bucket '{self.targetBucket}'"
+      Log(f"AppSettings.check_bucket_access(): Failed to fetch the bucket ACL for bucket '{self.targetBucket}' with the following exception:")
+      traceback.print_exc()
+      return False
+  def print_state(self):
+    print(f'''State => {self.status}
+Bucket => {self.targetBucket if self.targetBucket else '<none>'}
+Region => {self.awsRegion if self.awsRegion else '<none>'}
+AWS Profile => {self.awsProfile if self.awsProfile else '<none>'}
+AWS Key ID => {self.awsAccessKey if self.awsAccessKey else '<none>'}
+AWS Secret ID => {'************' if self.awsSecretKey else '<none>'}
+''')
+
+##############################################
 # Variables
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 allTemplates = {}
-targetBucket = os.getenv("TARGET_BUCKET") if "TARGET_BUCKET" in os.environ else ""
-awsRegion = os.getenv("BUCKET_AWS_REGION") if "BUCKET_AWS_REGION" in os.environ else ""
-awsAccountNumber = boto3.client('sts').get_caller_identity().get('Account')
 jenv = jinja2.Environment(loader=jinja2.BaseLoader())
 
-Log(f'''Running with settings:
-- Bucket Name => {targetBucket}
-- AWS Region => {awsRegion}
-- AWS Account Number => {awsAccountNumber}''')
-
-s3Client = boto3.client("s3", region_name=awsRegion)
-
-Log("Checking for required environment variable settings:")
-
-if targetBucket == "":
-  Log("Did not find environment variable TARGET_BUCKET populated, exiting!", quit=True)
-
-if awsRegion == "":
-  Log("Did not find environment variable BUCKET_AWS_REGION populated, exiting!", quit=True)
+LoadedAppSettings = AppSettings(
+  targetBucket=os.getenv("TARGET_BUCKET") if "TARGET_BUCKET" in os.environ else None,
+  awsRegion=os.getenv("AWS_DEFAULT_REGION") if "AWS_DEFAULT_REGION" in os.environ else None,
+  awsAccessKey=os.getenv("AWS_ACCESS_KEY_ID") if "AWS_ACCESS_KEY_ID" in os.environ else None,
+  awsSecretKey=os.getenv("AWS_SECRET_ACCESS_KEY") if "AWS_SECRET_ACCESS_KEY" in os.environ else None,
+  awsProfile=os.getenv("AWS_PROFILE") if "AWS_PROFILE" in os.environ else None,
+)
+loaded = LoadedAppSettings.check_access()
+if not loaded:
+  Log(f"Main(): Failed to load application settings, will be serving a settings page until full settings are provided!")
+  LoadedAppSettings.print_state()
+else:
+  Log(f'Running with settings:')
+  LoadedAppSettings.print_state()
 
 commonHeaders = {}
 
@@ -130,13 +212,13 @@ def LogResponses(res:flask.wrappers.Response):
 
 def GetObjects(prefix:str="", continueToken:str="", delimiter:str="/"):
   reqSettings = {
-    "Bucket": targetBucket,
+    "Bucket": LoadedAppSettings.targetBucket,
     "Delimiter": delimiter,
     "Prefix": prefix
   }
   if continueToken != "":
     reqSettings["ContinuationToken"] = continueToken
-  res = s3Client.list_objects_v2(**reqSettings)
+  res = LoadedAppSettings.s3Client.list_objects_v2(**reqSettings)
   pruned = {
     "objs": [],
     "token": ""
@@ -165,6 +247,17 @@ def GetObjects(prefix:str="", continueToken:str="", delimiter:str="/"):
   return pruned
 
 ##############################################
+# Middleware
+
+def mSettingsCheck():
+  if LoadedAppSettings.Ready == False:
+    Log(f"mSettingsCheck(): Found current LoadedAppSettings to not be ready:")
+    LoadedAppSettings.print_state()
+    return allTemplates["settings.html"].render(), False
+  else:
+    return None, True
+
+##############################################
 # Handlers
 
 def rHealthCheck():
@@ -173,10 +266,13 @@ def rHealthCheck():
   }
 
 def rStaticContent(path:str=""):
+  settingsRes, ok = mSettingsCheck()
+  if not ok:
+    return settingsRes
   if path == "":
-    t = f'{scriptDir}/templates{flask.request.full_path.rstrip("?")}'
+    t = f'{scriptDir}/dist{flask.request.full_path.rstrip("?")}'
   else:
-    t = f'{scriptDir}/templates/{path}'
+    t = f'{scriptDir}/dist/{path}'
   if not os.path.exists(t):
     return ResponseMaker(404, None, f"Static content at '{t}' not found on this server")
   try:
@@ -192,11 +288,17 @@ def rStaticContent(path:str=""):
     return ResponseMaker(500, None, f"Failed to read file at path '{t}', file exists but exception raised when attempting to return it")
 
 def rIndexPage():
-  return allTemplates["index.html"].render(bucket_name=targetBucket, region=awsRegion, account_number=awsAccountNumber)
+  settingsRes, ok = mSettingsCheck()
+  if not ok:
+    return settingsRes
+  return allTemplates["index.html"].render(bucket_name=LoadedAppSettings.targetBucket, region=LoadedAppSettings.awsRegion, account_number=LoadedAppSettings.awsAccountNumber)
 
 def rFetchObject(key:str):
+  settingsRes, ok = mSettingsCheck()
+  if not ok:
+    return settingsRes
   try:
-    thing = s3Client.get_object(Bucket=targetBucket, Key=key)
+    thing = LoadedAppSettings.s3Client.get_object(Bucket=LoadedAppSettings.targetBucket, Key=key)
     if not thing:
       return ResponseMaker(404, None, f"Static content at '{path}' not found on this bucket")
     res = flask.make_response()
@@ -212,6 +314,9 @@ def rFetchObject(key:str):
     return res
 
 def rGetObjects():
+  settingsRes, ok = mSettingsCheck()
+  if not ok:
+    return settingsRes
   req = flask.request
   try:
     resBody = req.get_json(force=True)
@@ -225,14 +330,44 @@ def rGetObjects():
     traceback.print_exc()
     return ResponseMaker(500, None, reason=f"Failed to parse json in request with error {e}")
 
+def rUpdateSettings():
+  req = flask.request
+  try:
+    resBody = req.get_json(force=True)
+    if not isinstance(resBody, dict):
+      return ResponseMaker(400, None, reason=f"This endpoint only accepts a dictionary. Your body content is a {type(resBody)}")
+    for k in resBody.keys():
+      if k not in ('targetBucket',
+        "awsProfile",
+        "awsAccessKey",
+        "awsSecretKey",
+        "awsProfile",
+        "awsRegion",
+      ):
+        return ResponseMaker(400, None, reason=f"Provided value '{k}' not an acceptable configuration!")
+    newSettings = AppSettings(**resBody)
+    ok = newSettings.check_access()
+    if ok:
+      global LoadedAppSettings
+      LoadedAppSettings = newSettings
+      Log(f"rUpdateSettings(): Configured a new set of updated settings!")
+      LoadedAppSettings.print_state()
+      return flask.redirect("/", 302)
+    else:
+      return ResponseMaker(400, None, reason=f"The configuration you provided failed either AWS or S3 access with the following error: '{newSettings.status}'")
+    return ResponseMaker(200, v)
+  except Exception as e:
+    traceback.print_exc()
+    return ResponseMaker(500, None, reason=f"Failed to update settings with error: {e}")
+
+
 ##############################################
 # The full routing list
 RouteMapping("/healthcheck", rHealthCheck, ["GET"])
 RouteMapping("/", rIndexPage, ["GET"])
-RouteMapping("/templates/<path>", rStaticContent, ["GET"])
 RouteMapping("/fetch/<path:key>", rFetchObject, ["GET"])
 RouteMapping("/get-objects", rGetObjects, ["POST"])
-RouteMapping("/favicon.ico", rStaticContent, ["GET"])
+RouteMapping("/settings", rUpdateSettings, ["POST"])
 
 ##############################################
 # Main
@@ -247,7 +382,8 @@ if commonHeaders:
     return res
 
 Log("Loading all Templates...")
-allTemplates["index.html"] = LoadTemplate(f"{scriptDir}/templates/index.html")
+allTemplates["index.html"] = LoadTemplate(f"{scriptDir}/dist/index.html")
+allTemplates["settings.html"] = LoadTemplate(f"{scriptDir}/dist/settings.html")
 for f in allTemplates.keys():
   Log(f'- {f}')
 
@@ -259,4 +395,4 @@ for r in RouteList:
 s3Proxy.after_request(LogResponses)
 
 Log("Starting server...")
-waitress.serve(s3Proxy, host="0.0.0.0", port=5000)
+waitress.serve(s3Proxy, host="0.0.0.0", port=3000)

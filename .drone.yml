@@ -13,11 +13,10 @@ steps:
   - GIT_SSL_NO_VERIFY=true git checkout $DRONE_COMMIT
 
 - name: Docker Image
-  image: smasherofallthings/python-fe
+  image: smasherofallthings/docker
   commands:
-  - npm install
-  - npm run solid && npm run tailwind
-  - docker build -t smasherofallthings/s3proxy:latest -t "smasherofallthings/s3proxy:$$(date '+%Y-%m-%d')-b$${DRONE_BUILD_NUMBER}" . && docker push smasherofallthings/s3proxy --all-tags
+  - docker compose build prod
+  - docker compose push prod
   volumes:
   - name: docker-socket
     path: /var/run/docker.sock
