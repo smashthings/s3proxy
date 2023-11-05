@@ -15,8 +15,6 @@ services:
     volumes:
       - .:/interactive
     working_dir: "/interactive"
-    env_file:
-      - ./dev/test.env
 
   prod:
     image: smasherofallthings/s3proxy:latest
