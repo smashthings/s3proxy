@@ -1,0 +1,13 @@
+version: '3.1'
+
+services:
+  s3proxy:
+    image: smasherofallthings/s3proxy:latest
+    restart: "no"
+    network_mode: host
+    environment:
+      HOME: /interactive
+      PYTHONUNBUFFERED: "true"
+      S3PROXYHEADER_Access_Control_Max_Age: "86400"
+      S3PROXYHEADER_Access_Control_Allow_Origin: "*"
+      S3PROXYHEADER_Access_Control_Allow_Methods: "GET,HEAD,OPTIONS"

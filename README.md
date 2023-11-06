@@ -31,17 +31,13 @@ It'll feel just like a file system browser but in the background there's that fr
 
 #### Direct Proxying
 
-Each object in the bucket can be accessible via `/fetch/<object-name>`. For example, if you had a company logo in your bucket at `s3://companybucket.com/company-images/logo.png` then after targeting s3-proxy to the bucket `companybucket.com` and giving it the required credentials you can hit `http://s3proxy.local/fetch/company-images/logo.png` and get your logo.
+Each object in the bucket can be accessible via `/fetch/<object-name>`. For example, if you had a company logo in your bucket at `s3://companybucket.com/company-images/logo.png` then after targeting s3proxy to the bucket `companybucket.com` and giving it the required credentials you can hit `http://s3proxy.local/fetch/company-images/logo.png` and get your logo.
 
-
-
-You can either provide access key + secret or mount a credentials file and provide a profile to use. If you're mounting your credentials and config files you'll need to target the path for your mount with the below AWS variables.
-
-Aside from the settings page, you can preseed the container with the same relative combination of AWS variables.
+You can either provide access key + secret or mount a credentials file and provide a profile to use. If you're mounting your credentials and config files you'll need to target the path for your mount with the below AWS variables. Check out the `docker/` directory for some docker compose files that demonstrate some standard settings.
 
 ## Variables
 
-#### s3_proxy
+#### s3proxy
 
 ```
 TARGET_BUCKET => The name of the bucket to target. If you don't provide this as an environment variable to the container then you'll get the settings page
@@ -78,4 +74,21 @@ AWS_DEFAULT_REGION => Set this to your bucket's region if you're having issues
 ## Deployment
 
 As a container driven application you can run this via the prebuilt image at smasherofallthings/s3proxy. Naturally, this lends itself well to Kubernetes and you can find jinja templates for manifests under the k8s directory in this repo.
+
+Additionally, you'll find preformatted docker-compose files for common use cases. Please note that all of the following have the standard browser headers set for CORS and caching. This is so browsers don't hammer s3proxy into oblivion for frontend assets and so you can use s3proxy endpoints on other sites.
+
+Also, all docker compose files use the host network. If you want to use specific ports then you'll want to edit the files. Default port is `3000`.
+
+I've set the files to use the host network as `docker compose run s3proxy` won't bind port definitions without also providing the `--service-ports` for security reasons. Docker won't warn you that it's ignoring your port configurations which makes it a horrid time sink to work out. The up command - `docker compose up` - will work with either explicit ports or the host network configuration. Do what you like!
+
+#### local-aws
+The docker compose file in the `local-aws` directory automounts your `$HOME/.aws` directory into the container at `/aws`. It also sets the AWS environment variables so that s3proxy knows where to find these creds. On boot you'll get the settings screen, but all you'll need to provide is your AWS Profile name and the bucket name and you're good to go.
+
+This is intended as a local fast browsing service for S3 Buckets.
+
+#### plain
+The docker compose file in the `plain` directory does not provide any configuration settings, hence you'll need to provide those settings at the settings screen. This may include sending a full stack of secrets to get full configuration. As this service does not run on TLS so you may not want to do that.
+
+#### standalone
+The docker compose file in the `standalone` directory provides the full settings needed for an auto bootup of s3proxy without needing to go through the settings page. This file won't "just work" as you'll need to provide the credentials and bucket name. However, if you provide those details correctly and run the service s3proxy will boot up with no issues. This is the sort of configuration you'll deploy when you want s3proxy to run as a full service.
 
